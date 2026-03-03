@@ -1,0 +1,26 @@
+# Environment
+.env
+.env.local
+
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+
+# Build outputs
+.next/
+frontend/.next/
+frontend/out/
+backend/__pycache__/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Old app build
+defi-app/build/
+defi-app/node_modules/
