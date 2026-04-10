@@ -1,8 +1,11 @@
 import asyncio
 import logging
-from fastapi import APIRouter, Query, HTTPException
+from typing import Annotated
+
+from fastapi import APIRouter, Query, HTTPException, Depends
 from app.services import alchemy, coingecko
 from app.utils.chains import get_chain, SUPPORTED_CHAIN_IDS
+from app.utils.ethereum_address import ethereum_address_query
 from app.models.schemas import NetWorthResponse, ChainNetWorth
 
 logger = logging.getLogger(__name__)
@@ -40,7 +43,7 @@ async def _chain_net_worth(address: str, cid: str) -> ChainNetWorth:
 
 @router.get("/net-worth", response_model=NetWorthResponse)
 async def net_worth(
-    address: str = Query(..., description="Wallet address"),
+    address: Annotated[str, Depends(ethereum_address_query)],
     chains: str = Query("ethereum", description="Comma-separated chain IDs"),
 ):
     chain_ids = [c.strip() for c in chains.split(",") if c.strip()]

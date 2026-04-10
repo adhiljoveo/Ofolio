@@ -3,19 +3,35 @@
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAccount } from "wagmi";
-import Navbar from "@/components/Navbar";
-import ChainSelector from "@/components/ChainSelector";
+import { isAddress } from "viem";
+import { motion, AnimatePresence } from "framer-motion";
+import { Wallet } from "lucide-react";
+
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
+import { AppHeader } from "@/components/app-header";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+
 import Overview from "@/components/dashboard/Overview";
 import TokenList from "@/components/dashboard/TokenList";
 import TransactionTable from "@/components/dashboard/TransactionTable";
 import NFTGrid from "@/components/dashboard/NFTGrid";
 import DefiPositions from "@/components/dashboard/DefiPositions";
 import StakesAPR from "@/components/dashboard/StakesAPR";
-import Spinner from "@/components/ui/Spinner";
-import { motion, AnimatePresence } from "framer-motion";
 
-const TABS = ["Overview", "Tokens", "Transactions", "NFTs", "DeFi", "Stakes"] as const;
-type Tab = (typeof TABS)[number];
+import { pageTransition } from "@/lib/animations";
+
+const SECTION_TITLES: Record<string, string> = {
+  overview: "Overview",
+  tokens: "Tokens",
+  transactions: "Transactions",
+  nfts: "NFTs",
+  defi: "DeFi",
+  stakes: "Stakes",
+};
 
 function PortfolioContent() {
   const { address: connectedAddress } = useAccount();
@@ -23,95 +39,153 @@ function PortfolioContent() {
   const queryAddress = searchParams.get("address");
 
   const [manualAddress, setManualAddress] = useState(queryAddress || "");
-  const [activeTab, setActiveTab] = useState<Tab>("Overview");
+  const [activeTab, setActiveTab] = useState("overview");
   const [chain, setChain] = useState("ethereum");
 
   const effectiveAddress = manualAddress.trim() || connectedAddress || "";
-  const shortAddr = effectiveAddress ? `${effectiveAddress.slice(0, 6)}...${effectiveAddress.slice(-4)}` : "";
 
   if (!effectiveAddress) {
     return (
-      <main className="pt-24 flex flex-col items-center justify-center min-h-screen px-6 text-center">
-        <h2 className="text-2xl font-bold mb-2">View portfolio</h2>
-        <p className="text-[var(--text-secondary)] mb-6">Connect a wallet or paste an address to get started.</p>
-        <form onSubmit={(e) => e.preventDefault()} className="flex gap-3 w-full max-w-md">
-          <input
-            type="text"
-            placeholder="0x..."
-            value={manualAddress}
-            onChange={(e) => setManualAddress(e.target.value)}
-            className="flex-1 px-4 py-3 rounded-xl bg-[var(--bg-tertiary)] border border-[var(--border)]
-              text-sm focus:outline-none focus:border-[var(--accent)]"
-          />
-        </form>
-      </main>
+      <SidebarProvider>
+        <AppSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+        <SidebarInset>
+          <AppHeader title="Portfolio" />
+          <div className="flex flex-1 items-center justify-center p-6">
+            <Card className="w-full max-w-md">
+              <CardHeader className="text-center">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 mb-2">
+                  <Wallet className="h-6 w-6 text-primary" />
+                </div>
+                <CardTitle>View Portfolio</CardTitle>
+                <CardDescription>
+                  Connect a wallet or paste an address to get started.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form
+                  onSubmit={(e) => e.preventDefault()}
+                  className="flex gap-2"
+                >
+                  <Input
+                    type="text"
+                    placeholder="0x..."
+                    value={manualAddress}
+                    onChange={(e) => setManualAddress(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button type="submit" disabled={!manualAddress.trim()}>
+                    Load
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    );
+  }
+
+  if (!isAddress(effectiveAddress)) {
+    return (
+      <SidebarProvider>
+        <AppSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+        <SidebarInset>
+          <AppHeader title="Portfolio" />
+          <div className="flex flex-1 items-center justify-center p-6">
+            <Card className="w-full max-w-md">
+              <CardHeader className="text-center">
+                <CardTitle>Invalid address</CardTitle>
+                <CardDescription>
+                  Use a valid Ethereum address (0x followed by 40 hex characters). Terminal output or
+                  other text cannot be used as a wallet address.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form
+                  onSubmit={(e) => e.preventDefault()}
+                  className="flex gap-2"
+                >
+                  <Input
+                    type="text"
+                    placeholder="0x..."
+                    value={manualAddress}
+                    onChange={(e) => setManualAddress(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button type="submit" disabled={!manualAddress.trim()}>
+                    Load
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
     );
   }
 
   return (
-    <main className="pt-24 px-4 md:px-8 max-w-7xl mx-auto pb-12">
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-3">
-          <div className="px-3 py-2 rounded-lg bg-[var(--accent)] text-white text-sm font-medium">
-            {shortAddr}
-          </div>
-          <ChainSelector value={chain} onChange={setChain} />
+    <SidebarProvider>
+      <AppSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+      <SidebarInset>
+        <AppHeader
+          title={SECTION_TITLES[activeTab] || "Dashboard"}
+          address={effectiveAddress}
+          chain={chain}
+          onChainChange={setChain}
+          manualAddress={manualAddress}
+          onManualAddressChange={setManualAddress}
+        />
+        <div className="flex-1 p-4 md:p-6">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={pageTransition.initial}
+              animate={pageTransition.animate}
+              exit={pageTransition.exit}
+              transition={pageTransition.transition}
+            >
+              {activeTab === "overview" && (
+                <Overview address={effectiveAddress} chain={chain} />
+              )}
+              {activeTab === "tokens" && (
+                <TokenList address={effectiveAddress} chain={chain} />
+              )}
+              {activeTab === "transactions" && (
+                <TransactionTable address={effectiveAddress} chain={chain} />
+              )}
+              {activeTab === "nfts" && (
+                <NFTGrid address={effectiveAddress} chain={chain} />
+              )}
+              {activeTab === "defi" && (
+                <DefiPositions address={effectiveAddress} />
+              )}
+              {activeTab === "stakes" && (
+                <StakesAPR address={effectiveAddress} />
+              )}
+            </motion.div>
+          </AnimatePresence>
         </div>
-        <form onSubmit={(e) => e.preventDefault()} className="flex gap-2">
-          <input
-            type="text"
-            placeholder="Change address..."
-            value={manualAddress}
-            onChange={(e) => setManualAddress(e.target.value)}
-            className="px-3 py-2 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border)] text-sm w-48
-              focus:outline-none focus:border-[var(--accent)]"
-          />
-        </form>
-      </div>
+      </SidebarInset>
+    </SidebarProvider>
+  );
+}
 
-      <div className="flex gap-1 mb-6 overflow-x-auto pb-2">
-        {TABS.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap ${
-              activeTab === tab
-                ? "bg-[var(--accent-muted)] text-[var(--accent)]"
-                : "text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]"
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
+function PortfolioSkeleton() {
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <Skeleton className="h-8 w-8 rounded-full" />
+        <Skeleton className="h-4 w-32" />
       </div>
-
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={activeTab}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          transition={{ duration: 0.2 }}
-        >
-          {activeTab === "Overview" && <Overview address={effectiveAddress} chain={chain} />}
-          {activeTab === "Tokens" && <TokenList address={effectiveAddress} chain={chain} />}
-          {activeTab === "Transactions" && <TransactionTable address={effectiveAddress} chain={chain} />}
-          {activeTab === "NFTs" && <NFTGrid address={effectiveAddress} chain={chain} />}
-          {activeTab === "DeFi" && <DefiPositions address={effectiveAddress} />}
-          {activeTab === "Stakes" && <StakesAPR address={effectiveAddress} />}
-        </motion.div>
-      </AnimatePresence>
-    </main>
+    </div>
   );
 }
 
 export default function PortfolioPage() {
   return (
-    <>
-      <Navbar />
-      <Suspense fallback={<div className="flex justify-center items-center min-h-screen"><Spinner /></div>}>
-        <PortfolioContent />
-      </Suspense>
-    </>
+    <Suspense fallback={<PortfolioSkeleton />}>
+      <PortfolioContent />
+    </Suspense>
   );
 }

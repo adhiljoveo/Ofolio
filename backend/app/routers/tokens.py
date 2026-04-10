@@ -1,6 +1,9 @@
-from fastapi import APIRouter, Query, HTTPException
+from typing import Annotated
+
+from fastapi import APIRouter, Query, HTTPException, Depends
 from app.services import alchemy, coingecko
 from app.utils.chains import get_chain, SUPPORTED_CHAIN_IDS
+from app.utils.ethereum_address import ethereum_address_query
 from app.models.schemas import TokenBalancesResponse, TokenBalance
 
 router = APIRouter(prefix="/tokens", tags=["tokens"])
@@ -8,7 +11,7 @@ router = APIRouter(prefix="/tokens", tags=["tokens"])
 
 @router.get("/balances", response_model=TokenBalancesResponse)
 async def token_balances(
-    address: str = Query(..., description="Wallet address"),
+    address: Annotated[str, Depends(ethereum_address_query)],
     chain: str = Query("ethereum", description="Chain ID", enum=SUPPORTED_CHAIN_IDS),
 ):
     try:

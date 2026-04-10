@@ -4,7 +4,7 @@ import httpx
 from fastapi import HTTPException
 from app.config import get_settings
 from app.utils.chains import get_chain, ChainInfo
-from app.utils.cache import BALANCE_CACHE, NFT_CACHE, TX_CACHE, cache_key
+from app.utils.cache import BALANCE_CACHE, NFT_CACHE, NFT_DETAIL_CACHE, TX_CACHE, cache_key
 
 logger = logging.getLogger(__name__)
 
@@ -149,8 +149,8 @@ async def get_token_balances(address: str, chain_id: str) -> dict:
             raw_bal = int(b["tokenBalance"], 16)
             tokens.append({
                 "contract_address": b["contractAddress"],
-                "symbol": meta.get("symbol", "???"),
-                "name": meta.get("name", "Unknown"),
+                "symbol": meta.get("symbol") or "???",
+                "name": meta.get("name") or "Unknown",
                 "logo": meta.get("logo"),
                 "decimals": decimals,
                 "balance_raw": str(raw_bal),
@@ -275,4 +275,73 @@ async def get_nfts(address: str, chain_id: str) -> dict:
         "total_count": data.get("totalCount", len(nfts)),
     }
     NFT_CACHE[ck] = result
+    return result
+
+
+async def get_nft_metadata(contract_address: str, token_id: str, chain_id: str) -> dict:
+    ck = cache_key("nft_detail", contract_address, token_id, chain_id)
+    if ck in NFT_DETAIL_CACHE:
+        return NFT_DETAIL_CACHE[ck]
+
+    chain = get_chain(chain_id)
+    key = _require_key()
+    url = f"https://{chain.alchemy_network}.g.alchemy.com/nft/v3/{key}/getNFTMetadata"
+    client = _get_client()
+
+    resp = await client.get(url, params={
+        "contractAddress": contract_address,
+        "tokenId": token_id,
+        "refreshCache": "false",
+    })
+
+    if resp.status_code != 200:
+        logger.error("Alchemy NFT metadata HTTP %s: %s", resp.status_code, resp.text[:300])
+        raise HTTPException(
+            status_code=502,
+            detail=f"Alchemy NFT metadata API returned HTTP {resp.status_code}",
+        )
+
+    try:
+        nft = resp.json()
+    except Exception:
+        raise HTTPException(status_code=502, detail="Alchemy NFT metadata API returned non-JSON response")
+
+    contract = nft.get("contract", {})
+    img = nft.get("image", {})
+    raw_meta = nft.get("raw", {}).get("metadata", {})
+    mint = nft.get("mint", {})
+    collection = nft.get("collection", {})
+
+    attributes = []
+    for attr in raw_meta.get("attributes", []):
+        attributes.append({
+            "trait_type": str(attr.get("trait_type", "")),
+            "value": str(attr.get("value", "")),
+        })
+
+    result = {
+        "contract_address": contract.get("address", contract_address),
+        "token_id": nft.get("tokenId", token_id),
+        "name": nft.get("name") or nft.get("title"),
+        "description": nft.get("description"),
+        "image_url": img.get("cachedUrl") or img.get("thumbnailUrl") or img.get("originalUrl"),
+        "image_original_url": img.get("originalUrl"),
+        "image_content_type": img.get("contentType"),
+        "collection_name": contract.get("name") or collection.get("name"),
+        "token_type": nft.get("tokenType"),
+        "token_uri": nft.get("tokenUri"),
+        "attributes": attributes,
+        "collection": {
+            "name": collection.get("name") or contract.get("name"),
+            "symbol": contract.get("symbol"),
+            "external_url": collection.get("externalUrl") or contract.get("externalUrl"),
+            "banner_image_url": collection.get("bannerImageUrl"),
+        },
+        "mint_timestamp": mint.get("timestamp"),
+        "mint_tx_hash": mint.get("transactionHash"),
+        "acquired_at": nft.get("acquiredAt", {}).get("blockTimestamp"),
+        "balance": nft.get("balance"),
+    }
+
+    NFT_DETAIL_CACHE[ck] = result
     return result

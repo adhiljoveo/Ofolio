@@ -27,7 +27,11 @@ function RainbowKitThemed({ children }: { children: ReactNode }) {
   const { resolvedTheme } = useTheme();
   return (
     <RainbowKitProvider
-      theme={resolvedTheme === "dark" ? darkTheme({ accentColor: "#6366f1" }) : lightTheme({ accentColor: "#4f46e5" })}
+      theme={
+        resolvedTheme === "dark"
+          ? darkTheme({ accentColor: "hsl(239, 84%, 67%)" })
+          : lightTheme({ accentColor: "hsl(239, 84%, 67%)" })
+      }
     >
       {children}
     </RainbowKitProvider>
@@ -41,7 +45,6 @@ function GlobalErrorSuppressor({ children }: { children: ReactNode }) {
       if (isWalletConnectNoise(msg)) {
         event.preventDefault();
         event.stopImmediatePropagation();
-        return false;
       }
     };
 
@@ -50,7 +53,6 @@ function GlobalErrorSuppressor({ children }: { children: ReactNode }) {
       if (isWalletConnectNoise(msg)) {
         event.preventDefault();
         event.stopImmediatePropagation();
-        return true;
       }
     };
 
@@ -67,9 +69,12 @@ function GlobalErrorSuppressor({ children }: { children: ReactNode }) {
 }
 
 export function Providers({ children }: { children: ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient({
-    defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
-  }));
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
+      })
+  );
 
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>

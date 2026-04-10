@@ -2,12 +2,32 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { api, DefiStakesResponse, APRData } from "@/lib/api";
-import Card from "@/components/ui/Card";
-import LoadingState from "@/components/ui/LoadingState";
-import Spinner from "@/components/ui/Spinner";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { motion } from "framer-motion";
+import { Lock, TrendingUp, Percent, Coins } from "lucide-react";
+import { staggerContainer, staggerItem, defaultTransition } from "@/lib/animations";
 
 interface Props {
   address: string;
+}
+
+function APRSkeleton() {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+      {Array.from({ length: 3 }).map((_, i) => (
+        <Card key={i}>
+          <CardHeader className="pb-2">
+            <Skeleton className="h-4 w-20" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-7 w-16" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
 }
 
 function APRDisplay() {
@@ -16,27 +36,64 @@ function APRDisplay() {
     queryFn: () => api.getAPR(),
   });
 
-  if (isLoading) return <Spinner size={24} />;
-  if (error || !data?.apr_data) return <p className="text-[var(--text-muted)]">APR data unavailable</p>;
+  if (isLoading) return <APRSkeleton />;
+  if (error || !data?.apr_data)
+    return (
+      <Card>
+        <CardContent className="py-4 text-center text-muted-foreground text-sm">
+          APR data unavailable
+        </CardContent>
+      </Card>
+    );
 
   const apr = data.apr_data;
   const fmt = (v: number | null) => (v != null ? `${v.toFixed(2)}%` : "N/A");
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-      <Card>
-        <p className="text-xs uppercase text-[var(--text-muted)]">Instant APR</p>
-        <p className="text-lg font-bold text-[var(--success)] mt-1">{fmt(apr.instant_apr)}</p>
-      </Card>
-      <Card>
-        <p className="text-xs uppercase text-[var(--text-muted)]">7-day APR</p>
-        <p className="text-lg font-bold mt-1">{fmt(apr.apr_7d)}</p>
-      </Card>
-      <Card>
-        <p className="text-xs uppercase text-[var(--text-muted)]">30-day APR</p>
-        <p className="text-lg font-bold mt-1">{fmt(apr.apr_30d)}</p>
-      </Card>
-    </div>
+    <motion.div
+      className="grid grid-cols-1 sm:grid-cols-3 gap-4"
+      variants={staggerContainer}
+      initial="initial"
+      animate="animate"
+    >
+      <motion.div variants={staggerItem} transition={defaultTransition}>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Instant APR</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-emerald-500">
+              {fmt(apr.instant_apr)}
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      <motion.div variants={staggerItem} transition={defaultTransition}>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">7-Day APR</CardTitle>
+            <Percent className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{fmt(apr.apr_7d)}</div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      <motion.div variants={staggerItem} transition={defaultTransition}>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">30-Day APR</CardTitle>
+            <Percent className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{fmt(apr.apr_30d)}</div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -47,40 +104,113 @@ export default function StakesAPR({ address }: Props) {
     enabled: !!address,
   });
 
-  if (isLoading) return <LoadingState label="Loading staking data..." variant="cards" />;
-  if (error) return <p className="text-[var(--danger)] text-center py-8">Failed to load staking data</p>;
+  if (isLoading)
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="pb-2">
+                <Skeleton className="h-4 w-24" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-32" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <APRSkeleton />
+      </div>
+    );
 
-  const hasStakes = data && (data.total_shares > 0 || data.total_eth_transferred > 0);
+  if (error)
+    return (
+      <Card>
+        <CardContent className="py-8 text-center text-destructive">
+          Failed to load staking data
+        </CardContent>
+      </Card>
+    );
+
+  const hasStakes =
+    data && (data.total_shares > 0 || data.total_eth_transferred > 0);
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-bold">Staking</h2>
-
+    <motion.div
+      className="space-y-6"
+      variants={staggerContainer}
+      initial="initial"
+      animate="animate"
+    >
       {hasStakes ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Card>
-            <p className="text-xs uppercase text-[var(--text-muted)]">Total shares</p>
-            <p className="text-xl font-bold mt-1">{data!.total_shares.toLocaleString()}</p>
-          </Card>
-          <Card>
-            <p className="text-xs uppercase text-[var(--text-muted)]">ETH transferred</p>
-            <p className="text-xl font-bold mt-1">{data!.total_eth_transferred.toFixed(6)} ETH</p>
-          </Card>
-        </div>
+        <motion.div
+          className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+          variants={staggerContainer}
+          initial="initial"
+          animate="animate"
+        >
+          <motion.div variants={staggerItem} transition={defaultTransition}>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Total Shares
+                </CardTitle>
+                <Lock className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {data!.total_shares.toLocaleString()}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <motion.div variants={staggerItem} transition={defaultTransition}>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  ETH Transferred
+                </CardTitle>
+                <Coins className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {data!.total_eth_transferred.toFixed(6)} ETH
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </motion.div>
       ) : (
-        <Card className="!py-12 flex flex-col items-center text-center">
-          <div className="text-4xl mb-3 opacity-40">🔒</div>
-          <p className="text-[var(--text-secondary)] font-medium">Not staking</p>
-          <p className="text-sm text-[var(--text-muted)] mt-1 max-w-xs">
-            This wallet has no Lido staking history. Stake ETH with Lido to earn rewards.
-          </p>
-        </Card>
+        <motion.div variants={staggerItem} transition={defaultTransition}>
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-16">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-4">
+                <Lock className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <h3 className="font-semibold mb-1">Not Staking</h3>
+              <p className="text-sm text-muted-foreground text-center max-w-xs">
+                This wallet has no Lido staking history. Stake ETH with Lido to
+                earn rewards.
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
       )}
 
-      <div>
-        <h3 className="text-lg font-semibold mb-4">Lido APR (current network rates)</h3>
-        <APRDisplay />
-      </div>
-    </div>
+      <motion.div variants={staggerItem} transition={defaultTransition}>
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-lg font-semibold tracking-tight">
+              Lido APR
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Current network staking rates
+            </p>
+          </div>
+          <APRDisplay />
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }

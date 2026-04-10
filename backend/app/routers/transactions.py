@@ -1,6 +1,9 @@
-from fastapi import APIRouter, Query, HTTPException
+from typing import Annotated
+
+from fastapi import APIRouter, Query, HTTPException, Depends
 from app.services import alchemy
 from app.utils.chains import SUPPORTED_CHAIN_IDS
+from app.utils.ethereum_address import ethereum_address_query
 from app.models.schemas import TransactionsResponse, Transaction
 
 router = APIRouter(tags=["transactions"])
@@ -8,7 +11,7 @@ router = APIRouter(tags=["transactions"])
 
 @router.get("/transactions", response_model=TransactionsResponse)
 async def transactions(
-    address: str = Query(..., description="Wallet address"),
+    address: Annotated[str, Depends(ethereum_address_query)],
     chain: str = Query("ethereum", description="Chain ID", enum=SUPPORTED_CHAIN_IDS),
     page_key: str | None = Query(None, description="Pagination key from previous response"),
 ):

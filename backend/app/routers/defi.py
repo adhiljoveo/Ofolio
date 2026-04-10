@@ -1,12 +1,15 @@
-from fastapi import APIRouter, Query
+from typing import Annotated
+
+from fastapi import APIRouter, Depends
 from app.services import thegraph, dune
+from app.utils.ethereum_address import ethereum_address_query
 
 router = APIRouter(prefix="/defi", tags=["defi"])
 
 
 @router.get("/liquidity")
 async def liquidity(
-    address: str = Query(..., description="Wallet address"),
+    address: Annotated[str, Depends(ethereum_address_query)],
 ):
     positions = await thegraph.get_liquidity_positions(address)
     return {"address": address, "positions": positions}
@@ -14,7 +17,7 @@ async def liquidity(
 
 @router.get("/stakes")
 async def stakes(
-    address: str = Query(..., description="Wallet address"),
+    address: Annotated[str, Depends(ethereum_address_query)],
 ):
     data = await thegraph.get_lido_stakes(address)
     return {"address": address, **data}

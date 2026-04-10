@@ -60,6 +60,37 @@ class NFTsResponse(BaseModel):
     total_count: int
 
 
+class NFTAttribute(BaseModel):
+    trait_type: str
+    value: str
+
+
+class NFTCollection(BaseModel):
+    name: str | None = None
+    symbol: str | None = None
+    external_url: str | None = None
+    banner_image_url: str | None = None
+
+
+class NFTDetail(BaseModel):
+    contract_address: str
+    token_id: str
+    name: str | None = None
+    description: str | None = None
+    image_url: str | None = None
+    image_original_url: str | None = None
+    image_content_type: str | None = None
+    collection_name: str | None = None
+    token_type: str | None = None
+    token_uri: str | None = None
+    attributes: list[NFTAttribute] = []
+    collection: NFTCollection | None = None
+    mint_timestamp: str | None = None
+    mint_tx_hash: str | None = None
+    acquired_at: str | None = None
+    balance: str | None = None
+
+
 class ChainNetWorth(BaseModel):
     chain: str
     total_usd: float

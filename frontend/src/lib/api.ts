@@ -69,6 +69,37 @@ export interface NFTsResponse {
   total_count: number;
 }
 
+export interface NFTAttribute {
+  trait_type: string;
+  value: string;
+}
+
+export interface NFTCollection {
+  name: string | null;
+  symbol: string | null;
+  external_url: string | null;
+  banner_image_url: string | null;
+}
+
+export interface NFTDetail {
+  contract_address: string;
+  token_id: string;
+  name: string | null;
+  description: string | null;
+  image_url: string | null;
+  image_original_url: string | null;
+  image_content_type: string | null;
+  collection_name: string | null;
+  token_type: string | null;
+  token_uri: string | null;
+  attributes: NFTAttribute[];
+  collection: NFTCollection | null;
+  mint_timestamp: string | null;
+  mint_tx_hash: string | null;
+  acquired_at: string | null;
+  balance: string | null;
+}
+
 export interface ChainNetWorth {
   chain: string;
   total_usd: number;
@@ -116,6 +147,9 @@ export const api = {
 
   getNFTs: (address: string, chain: string) =>
     fetchAPI<NFTsResponse>("/nfts", { address, chain }),
+
+  getNFTDetail: (contractAddress: string, tokenId: string, chain: string) =>
+    fetchAPI<NFTDetail>("/nfts/detail", { contract_address: contractAddress, token_id: tokenId, chain }),
 
   getNetWorth: (address: string, chains: string) =>
     fetchAPI<NetWorthResponse>("/portfolio/net-worth", { address, chains }),
